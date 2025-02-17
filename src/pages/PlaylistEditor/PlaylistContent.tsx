@@ -41,7 +41,6 @@ export default function PlaylistContent() {
   const [error, setError] = useState<string | null>(null);
   const [playlistModules, setPlaylistModules] = useState<PlaylistModule[]>([]);
   const [activeTab, setActiveTab] = useState<'modules' | 'playlists'>('modules');
-  const [nestedPlaylists, setNestedPlaylists] = useState<NestedPlaylist[]>([]);
   const [availableModules, setAvailableModules] = useState<Module[]>([]);
   const [availablePlaylists, setAvailablePlaylists] = useState<NestedPlaylist[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,10 +51,94 @@ export default function PlaylistContent() {
   useEffect(() => {
     if (playlistId) {
       loadPlaylistModules();
-      loadAvailableModules();
-      loadAvailablePlaylists();
+      if (isAddingModule) {
+        loadAvailableModules();
+        loadAvailablePlaylists();
+      }
     }
-  }, [playlistId]);
+  }, [playlistId, isAddingModule]);
+
+  const handleDragStart = (module: PlaylistModule) => {
+    setIsDragging(true);
+    setDraggedModule(module);
+  };
+
+  const handleDragOver = (e: React.DragEvent, targetModule: PlaylistModule) => {
+    e.preventDefault();
+    if (!draggedModule || draggedModule.id === targetModule.id) return;
+
+    const newModules = [...playlistModules];
+    const draggedIndex = newModules.findIndex(m => m.id === draggedModule.id);
+    const targetIndex = newModules.findIndex(m => m.id === targetModule.id);
+
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    // Reorder array
+    newModules.splice(draggedIndex, 1);
+    newModules.splice(targetIndex, 0, draggedModule);
+
+    // Update positions
+    newModules.forEach((module, index) => {
+      module.position = index;
+    });
+
+    setPlaylistModules(newModules);
+  };
+
+  const handleDragEnd = async () => {
+    if (!draggedModule) {
+      setIsDragging(false);
+      setDraggedModule(null);
+      return;
+    }
+
+    try {
+      // Find original position of the dragged module
+      const originalIndex = playlistModules.findIndex(m => m.id === draggedModule.id);
+      if (originalIndex === -1) return;
+      
+      // Find current position in the updated array
+      const newIndex = playlistModules.findIndex(m => m.id === draggedModule.id);
+      if (newIndex === originalIndex) {
+        // No change in position
+        setIsDragging(false);
+        setDraggedModule(null);
+        return;
+      }
+
+      // Determine affected range (min and max indices that changed)
+      const minAffectedIndex = Math.min(originalIndex, newIndex);
+      const maxAffectedIndex = Math.max(originalIndex, newIndex);
+      
+      // First, move affected items to temporary negative positions
+      for (let i = minAffectedIndex; i <= maxAffectedIndex; i++) {
+        const { error } = await supabase
+          .from('playlist_items')
+          .update({ position: -(i + 1000) })
+          .eq('id', playlistModules[i].id);
+        
+        if (error) throw error;
+      }
+
+      // Then update to final positions
+      for (let i = minAffectedIndex; i <= maxAffectedIndex; i++) {
+        const { error } = await supabase
+          .from('playlist_items')
+          .update({ position: i })
+          .eq('id', playlistModules[i].id);
+        
+        if (error) throw error;
+      }
+    } catch (err) {
+      console.error('Error updating positions:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update positions');
+      // Reload original order on error
+      await loadPlaylistModules();
+    } finally {
+      setIsDragging(false);
+      setDraggedModule(null);
+    }
+  };
 
   const loadAvailablePlaylists = async () => {
     try {
@@ -83,7 +166,7 @@ export default function PlaylistContent() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Verify user has access to both playlists
+      // Verify user has access to this playlist
       const { data: playlist, error: playlistError } = await supabase
         .from('playlists')
         .select('creator_id')
@@ -159,27 +242,53 @@ export default function PlaylistContent() {
   };
 
   const loadPlaylistModules = async () => {
+    if (!playlistId) return;
+
+    setLoading(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // First verify user has access to this playlist
+      const { data: playlist, error: playlistError } = await supabase
+        .from('playlists')
+        .select('creator_id')
+        .eq('id', playlistId)
+        .single();
+
+      if (playlistError) throw playlistError;
+      if (playlist.creator_id !== user.id) throw new Error('Unauthorized');
+
+      // Then get all items in this playlist
       const { data, error } = await supabase
         .from('playlist_items')
         .select(`
           *,
-          module:modules(*),
-          sub_playlist:playlists(*)
+          module:modules!playlist_items_module_id_fkey (
+            id,
+            title,
+            description,
+            thumbnail_url,
+            visibility,
+            created_at,
+            updated_at
+          ),
+          sub_playlist:playlists!playlist_items_sub_playlist_id_fkey (
+            id,
+            title,
+            description,
+            thumbnail_url,
+            visibility,
+            created_at,
+            updated_at
+          )
         `)
         .eq('playlist_id', playlistId)
         .order('position');
 
       if (error) throw error;
       
-      // Transform data to handle both modules and sub-playlists
-      const items = (data || []).map(item => ({
-        ...item,
-        module: item.module_id ? item.module : null,
-        sub_playlist: item.sub_playlist_id ? item.sub_playlist : null
-      }));
-      
-      setPlaylistModules(items);
+      setPlaylistModules(data || []);
     } catch (err) {
       console.error('Error loading playlist modules:', err);
       setError(err instanceof Error ? err.message : 'Failed to load playlist modules');
@@ -212,7 +321,7 @@ export default function PlaylistContent() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Verify user has access to both playlist and module
+      // Verify user has access to this playlist
       const { data: playlist, error: playlistError } = await supabase
         .from('playlists')
         .select('creator_id')
@@ -285,6 +394,19 @@ export default function PlaylistContent() {
 
   const handleRemovePlaylist = async (playlistId: string) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Verify user has access to this playlist
+      const { data: playlist, error: playlistError } = await supabase
+        .from('playlists')
+        .select('creator_id')
+        .eq('id', playlistId)
+        .single();
+
+      if (playlistError) throw playlistError;
+      if (playlist.creator_id !== user.id) throw new Error('Unauthorized');
+
       const { error } = await supabase
         .from('playlist_items')
         .delete()
@@ -299,53 +421,31 @@ export default function PlaylistContent() {
     }
   };
 
-  const handleDragStart = (module: PlaylistModule) => {
-    setIsDragging(true);
-    setDraggedModule(module);
-  };
-
-  const handleDragOver = (e: React.DragEvent, targetModule: PlaylistModule) => {
-    e.preventDefault();
-    if (!draggedModule || draggedModule.id === targetModule.id) return;
-
-    const newModules = [...playlistModules];
-    const draggedIndex = newModules.findIndex(m => m.id === draggedModule.id);
-    const targetIndex = newModules.findIndex(m => m.id === targetModule.id);
-
-    if (draggedIndex === -1 || targetIndex === -1) return;
-
-    // Reorder array
-    newModules.splice(draggedIndex, 1);
-    newModules.splice(targetIndex, 0, draggedModule);
-
-    // Update positions
-    newModules.forEach((module, index) => {
-      module.position = index;
-    });
-
-    setPlaylistModules(newModules);
-  };
-
-  const handleDragEnd = async () => {
-    setIsDragging(false);
-    setDraggedModule(null);
-
-    // Save new positions to database
+  const handleUpdatePositions = async (updates: { id: string, position: number }[]) => {
     try {
-      const updates = playlistModules.map(({ id, position }) => ({
-        id,
-        position
-      }));
+      // First move all items to temporary negative positions
+      for (let i = 0; i < updates.length; i++) {
+        const { error } = await supabase
+          .from('playlist_items')
+          .update({ position: -(i + 1000) })
+          .eq('id', updates[i].id);
+        
+        if (error) throw error;
+      }
 
-      const { error } = await supabase
-        .from('playlist_items')
-        .upsert(updates);
-
-      if (error) throw error;
+      // Then update to final positions
+      for (const update of updates) {
+        const { error } = await supabase
+          .from('playlist_items')
+          .update({ position: update.position })
+          .eq('id', update.id);
+        
+        if (error) throw error;
+      }
     } catch (err) {
       console.error('Error updating positions:', err);
       setError(err instanceof Error ? err.message : 'Failed to update positions');
-      await loadPlaylistModules(); // Reload original order
+      await loadPlaylistModules();
     }
   };
 
@@ -392,7 +492,10 @@ export default function PlaylistContent() {
               key={playlistModule.module_id || playlistModule.sub_playlist_id}
               draggable
               onDragStart={() => handleDragStart(playlistModule)}
-              onDragOver={(e) => handleDragOver(e, playlistModule)}
+              onDragOver={(e) => {
+                e.preventDefault();
+                handleDragOver(e, playlistModule);
+              }}
               onDragEnd={handleDragEnd}
               className={`flex items-center p-4 group ${
                 isDragging && draggedModule?.id === playlistModule.id
