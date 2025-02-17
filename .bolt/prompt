@@ -1,0 +1,154 @@
+For all designs I ask you to make, have them be beautiful, not cookie cutter. Make webpages that are fully featured and worthy for production.
+
+By default, this template supports JSX syntax with Tailwind CSS classes, React hooks, and Lucide React for icons. Do not install other packages for UI themes, icons, etc unless absolutely necessary or I request them.
+
+Use icons from lucide-react for logos.
+
+Use stock photos from unsplash where appropriate, only valid URLs you know exist. Do not download the images, only link to them in image tags.
+
+Here is information about the platform we are developing
+RonuNest: A Comprehensive Overview
+
+1. What is RonuNest?
+
+RonuNest is an interactive learning platform designed to revolutionise education by making learning as engaging, viral, and dynamic as entertainment. It enables educators, trainers, and content creators to design interactive, decision-based simulations and highly personalised learning experiences effortlessly without requiring technical expertise.
+
+At its core, RonuNest is a creator platform that allows anyone to build and share immersive learning experiences. Unlike traditional e-learning platforms that rely on static videos and quizzes, RonuNest leverages interactivity, storytelling, and gamification to make learning truly engaging.
+
+---
+
+2. Business and Commercial Strategy
+
+Target Market
+
+RonuNest serves multiple customer segments:
+
+1. Independent Course Creators & Trainers (Primary Market) – SMEs, consultants, and professional trainers looking to create engaging learning content.
+2. Enterprises & L&D Teams – Corporate learning and development teams that need custom, interactive training for employee upskilling.
+3. Educational Institutions – Schools and universities looking to provide engaging, adaptive learning for students.
+4. General Public & Gamified Learning Creators – Individual users experimenting with the platform for unique learning experiences.
+
+Revenue Model
+
+* Subscription-Based Model:
+  * Basic (£30/month) – Limited analytics & features.
+  * Pro (£300/month) – Advanced analytics, full scripting logic.
+  * Enterprise (£10,000+/year) – Custom integrations & scalable solutions.
+* Marketplace Revenue (Planned) – Creators can sell their learning modules, and RonuNest takes a percentage (10%) of transactions.
+* Corporate & NGO Partnerships – Special project-based revenue through partnerships with governments, non-profits, and large corporations to create custom learning solutions.
+
+Competitive Differentiation (Moat)
+
+* Interactive Storytelling – No other major LMS/LXP focuses on decision-based, gamified learning.
+* Logic-Driven Personalisation – Rhai scripting engine for dynamic content adaptation (similar to how Lua scripting enhances games).
+* Social & Viral Learning – Encourages users to share learning outcomes and compare decisions.
+* Flexible Embedding – Modules can be embedded in other LMS platforms, but analytics and decision-logic remain exclusive to RonuNest.
+
+---
+
+3. Technical Overview
+
+Current RonuNest (MVP) Stage
+
+The current MVP (Minimum Viable Product) has several working features, including:
+
+* Story-Based Module Creation – Users can create interactive, branching simulations.
+* Decision-Based Simulations – Choices alter learning paths dynamically.
+* Logic System for Personalisation – Allows if-then logic rules for adaptive learning.
+* Basic AI Character Interaction (First Draft) – Prototype feature enabling simple AI-driven conversations in modules.
+* Analytics & Data Capture – Collects learner decision data for engagement insights.
+* Content Visibility Controls – Modules can be Public, Private, or Unlisted.
+* Class Management System – Creators can assign learners to specific classes.
+
+Current Tech Stack
+
+* Frontend: Flutter (Web & Mobile)
+* Backend: Firebase (Firestore, Authentication, Functions)
+* Logic Engine: Rhai scripting integration (for content adaptiveness)
+* Data Analytics: Cloud Firestore & Google Analytics
+
+Future RonuNest (Scaled Version)
+
+To scale globally and expand capabilities, the future roadmap includes:
+
+1. AI-Assisted Course Creation – AI-driven storyboarding, content suggestions, and automatic branching scenarios.
+2. Marketplace & Monetisation – A fully integrated ecosystem where creators can sell their modules.
+3. Mobile-First Optimisation & Offline Access – Essential for African & emerging market adoption.
+4. Advanced AI Character Interactions – More intelligent, responsive AI-driven NPCs within learning modules.
+5. Multiplayer & Social Learning – Collaborative decision-making, team-based learning, and live simulation modes.
+
+Future Tech Stack Considerations
+
+* Move from Firebase to PostgreSQL (for relational data support).
+* Expand AI capabilities using GPT-based chat for AI-driven coaching.
+* Blockchain/NFT certificates for credentialing and gamified learning rewards.
+
+---
+
+4. Vision & Aspirations
+
+Purpose (Why RonuNest Exists)
+
+“To revolutionise education by turning learning into a shared, joyful experience that empowers individuals and transforms communities.”
+
+Mission (How RonuNest Achieves Its Purpose)
+
+“To build an intuitive platform where anyone can create, share, and monetise interactive learning adventures that adapt to every learner.”
+
+Vision (What Success Looks Like)
+
+“A world where learning is as viral and engaging as entertainment, empowering everyone to embrace education as a lifelong adventure.”
+
+Special Focus on Africa
+
+RonuNest is designed with global scalability, but a major goal is to bridge the education gap in Africa by:
+
+* Providing high-quality, mobile-first learning tools.
+* Allowing local educators to monetise their expertise.
+* Partnering with African schools, governments, and NGOs to expand access to interactive education.
+
+---
+
+5. Roadmap
+
+Year 1 (2024) – MVP & Early Adoption
+
+* Launch MVP with core simulation & logic features.
+* Acquire early adopters (independent educators & SMEs).
+* Build traction in UK/USA through referrals & word-of-mouth.
+
+Year 2 (2025) – Scaling & Partnerships
+
+* Introduce mobile-first features & offline access.
+* Secure African partnerships (NGOs, schools, corporate sponsors).
+* Launch marketplace for creators.
+
+Year 3 (2026) – Global Expansion
+
+* Expand into Africa, South Asia & Latin America.
+* Introduce AI-assisted course creation.
+* Grow enterprise adoption & L&D partnerships.
+
+---
+
+Final Summary
+
+What Makes RonuNest Special?
+
+1. A Learning Platform, Not Just an LMS – Creators can design interactive stories that adapt based on learner input.
+2. AI + Logic-Driven Personalisation – Learners experience adaptive learning that changes in real time.
+3. Monetisation for Educators – Empowers educators as entrepreneurs with a marketplace.
+4. Social & Viral Learning – Encourages user-generated content & shared learning experiences.
+5. Designed for Scale, Built for Impact – Mobile-first, offline-ready, and tailored for emerging markets.
+
+Current Stage vs. Future Goals
+
+Aspect	Current MVP (2024)	Future RonuNest (2025-2027)
+Core Functionality	Story-based learning creation	AI-assisted course creation, multiplayer modes
+Personalisation	Manual logic-based scripting	AI-driven adaptive learning
+Monetisation	Subscription-based only	Marketplace for selling content
+AI Features	Basic AI character interactions	Advanced AI-driven NPCs & recommendations
+Market Focus	UK/USA early adopters	Global scale, African education transformation
+
+
+---
