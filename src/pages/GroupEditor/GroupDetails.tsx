@@ -2,21 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Globe2, Lock, Users, Loader2, Plus } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-
-interface Group {
-  id: string;
-  name: string;
-  description: string;
-  thumbnail_url: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface GroupMember {
-  email: string;
-  first_name: string;
-  last_name: string;
-}
+import { formatFileSize } from '../../utils/formatters';
+import type { User } from '@supabase/supabase-js';
 
 export default function GroupDetails() {
   const [searchParams] = useSearchParams();
@@ -39,10 +26,16 @@ export default function GroupDetails() {
   const loadGroup = async (id: string) => {
     setIsLoading(true);
     try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Check if user has access to this group
       const { data: group, error } = await supabase
         .from('groups')
         .select('*')
-        .eq('id', id)
+        .eq('id', id) 
+        .eq('creator_id', user.id)
         .single();
 
       if (error) throw error;
@@ -88,22 +81,40 @@ export default function GroupDetails() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Validate input
+      if (!name.trim()) {
+        throw new Error('Name is required');
+      }
+
       let thumbnailUrl = thumbnailPreview;
       if (thumbnail) {
+        // Validate file size
+        if (thumbnail.size > 10 * 1024 * 1024) {
+          throw new Error(`File size exceeds 10MB limit (${formatFileSize(thumbnail.size)})`);
+        }
+
+        // Validate file type
+        if (!thumbnail.type.startsWith('image/')) {
+          throw new Error('Only image files are allowed');
+        }
+
         const fileExt = thumbnail.name.split('.').pop();
         const fileName = `group-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
         
-        const { error: uploadError } = await supabase.storage
+        const { error: uploadError, data } = await supabase.storage
           .from('module-thumbnails')
-          .upload(fileName, thumbnail, {
+          .upload(fileName, thumbnail, { 
             cacheControl: '3600',
             upsert: false
           });
 
         if (uploadError) throw uploadError;
-        const { data: { publicUrl } } = supabase.storage
+
+        // Only get public URL if upload succeeded
+        const { data: { publicUrl } } = await supabase.storage
           .from('module-thumbnails')
           .getPublicUrl(fileName);
+
         thumbnailUrl = publicUrl;
       }
 
@@ -111,18 +122,22 @@ export default function GroupDetails() {
         name,
         description,
         thumbnail_url: thumbnailUrl,
-        creator_id: user.id,
         updated_at: new Date().toISOString()
       };
 
       if (groupId) {
+        // Update existing group
         const { error } = await supabase
           .from('groups')
           .update(groupData)
-          .eq('id', groupId);
+          .eq('id', groupId)
+          .eq('creator_id', user.id);
 
         if (error) throw error;
       } else {
+        // Create new group
+        groupData.creator_id = user.id;
+
         const { data, error } = await supabase
           .from('groups')
           .insert(groupData)
@@ -131,16 +146,13 @@ export default function GroupDetails() {
 
         if (error) throw error;
         
-        // Add members to the new group
-        if (data) {          
-          navigate(`/studio/learners/group/content?id=${data.id}`);
-        }
+        navigate(`/studio/learners/group/content?id=${data.id}`);
       }
 
       setError('Group saved successfully');
       setTimeout(() => setError(null), 3000);
     } catch (err) {
-      console.error('Error saving group:', err);
+      console.error('Error saving group:', err); 
       setError(err instanceof Error ? err.message : 'Failed to save group');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
@@ -243,8 +255,8 @@ export default function GroupDetails() {
                       <span>Upload a thumbnail</span>
                       <input id="thumbnail" type="file" className="sr-only" onChange={handleThumbnailChange} accept="image/*" />
                     </label>
+                    <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
                   </div>
-                  <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
                 </div>
               )}
             </div>

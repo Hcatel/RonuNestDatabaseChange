@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Globe2, Lock, Users, Loader2 } from 'lucide-react';
+import { Globe2, Lock, Users, Loader2, Clock } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface VisibilityOptionProps {
@@ -32,7 +32,7 @@ function VisibilityOption({ icon, label, description, isSelected, onClick }: Vis
   );
 }
 
-type PlaylistVisibility = 'public' | 'private' | 'restricted';
+type PlaylistVisibility = 'draft' | 'public' | 'restricted';
 
 export default function PlaylistDetails() {
   const [searchParams] = useSearchParams();
@@ -40,7 +40,7 @@ export default function PlaylistDetails() {
   const playlistId = searchParams.get('id');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [visibility, setVisibility] = useState<PlaylistVisibility>('private');
+  const [visibility, setVisibility] = useState<PlaylistVisibility>('draft');
   const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
@@ -285,6 +285,13 @@ export default function PlaylistDetails() {
         <h2 className="text-xl font-semibold text-[#333333] mb-6">Access Settings</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <VisibilityOption
+            icon={<Clock className="w-5 h-5" />}
+            label="Draft"
+            description="Only you can see this"
+            isSelected={visibility === 'draft'}
+            onClick={() => setVisibility('draft')}
+          />
+          <VisibilityOption
             icon={<Globe2 className="w-5 h-5" />}
             label="Public"
             description="Anyone can access"
@@ -293,13 +300,6 @@ export default function PlaylistDetails() {
           />
           <VisibilityOption
             icon={<Lock className="w-5 h-5" />}
-            label="Private"
-            description="Only you and invited users"
-            isSelected={visibility === 'private'}
-            onClick={() => setVisibility('private')}
-          />
-          <VisibilityOption
-            icon={<Users className="w-5 h-5" />}
             label="Restricted"
             description="Specific groups only"
             isSelected={visibility === 'restricted'}

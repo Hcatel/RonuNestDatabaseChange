@@ -32,7 +32,7 @@ function VisibilityOption({ icon, label, description, isSelected, onClick }: Vis
   );
 }
 
-type ModuleVisibility = 'draft' | 'private' | 'public' | 'restricted';
+type ModuleVisibility = 'draft' | 'public' | 'restricted';
 
 export default function ModuleSummary() {
   const navigate = useNavigate();
@@ -40,7 +40,7 @@ export default function ModuleSummary() {
   const moduleId = searchParams.get('id');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [visibility, setVisibility] = useState<ModuleVisibility>('private');
+  const [visibility, setVisibility] = useState<ModuleVisibility>('draft');
   const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
@@ -83,7 +83,7 @@ export default function ModuleSummary() {
       // Reset form when no module ID is present
       setTitle('');
       setDescription('');
-      setVisibility('private');
+      setVisibility('draft');
       setThumbnailPreview('');
       setThumbnail(null);
       setIsLoading(false);
@@ -351,13 +351,6 @@ export default function ModuleSummary() {
                 onClick={() => setVisibility('draft')}
               />
               <VisibilityOption
-                icon={<Lock className="w-5 h-5" />}
-                label="Private"
-                description="Only you and invited users"
-                isSelected={visibility === 'private'}
-                onClick={() => setVisibility('private')}
-              />
-              <VisibilityOption
                 icon={<Globe2 className="w-5 h-5" />}
                 label="Public"
                 description="Anyone can access"
@@ -365,7 +358,7 @@ export default function ModuleSummary() {
                 onClick={() => setVisibility('public')}
               />
               <VisibilityOption
-                icon={<Users className="w-5 h-5" />}
+                icon={<Lock className="w-5 h-5" />}
                 label="Restricted"
                 description="Specific groups only"
                 isSelected={visibility === 'restricted'}

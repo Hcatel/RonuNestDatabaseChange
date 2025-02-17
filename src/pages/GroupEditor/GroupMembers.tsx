@@ -4,17 +4,18 @@ import { Loader2, Upload } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import Papa from 'papaparse';
 
-interface GroupMember {
-  email: string;
-  first_name: string;
-  last_name: string;
+interface Profile {
+  id: uuid;
+  username: string;
+  full_name: string | null;
+  role: string;
 }
 
 export default function GroupMembers() {
   const [searchParams] = useSearchParams();
   const groupId = searchParams.get('id');
-  const [members, setMembers] = useState<GroupMember[]>([]);
-  const [newMember, setNewMember] = useState<GroupMember>({ email: '', first_name: '', last_name: '' });
+  const [members, setMembers] = useState<Profile[]>([]);
+  const [newMemberEmail, setNewMemberEmail] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,13 +30,26 @@ export default function GroupMembers() {
   const loadMembers = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // Get all group members
+      const { data: memberData, error: memberError } = await supabase
         .from('group_members')
-        .select('*')
+        .select('member_id')
         .eq('group_id', groupId);
 
-      if (error) throw error;
-      setMembers(data || []);
+      if (memberError) throw memberError;
+
+      if (memberData && memberData.length > 0) {
+        // Get profile information for each member
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .in('id', memberData.map(m => m.member_id));
+
+        if (profileError) throw profileError;
+        setMembers(profileData || []);
+      } else {
+        setMembers([]);
+      }
     } catch (err) {
       console.error('Error loading members:', err);
       setError(err instanceof Error ? err.message : 'Failed to load members');
@@ -44,36 +58,48 @@ export default function GroupMembers() {
     }
   };
 
-  const handleAddMember = async () => {
-    if (!newMember.email || !groupId) return;
+  const handleAddMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMemberEmail || !groupId) return;
 
     setIsSaving(true);
     setError(null);
 
     try {
-      const { error } = await supabase
+      // First get the profile ID for the email
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', newMemberEmail)
+        .single();
+
+      if (profileError) throw new Error('User not found with that email');
+
+      // Then add the member to the group
+      const { error: memberError } = await supabase
         .from('group_members')
         .insert({
           group_id: groupId,
-          email: newMember.email,
-          first_name: newMember.first_name,
-          last_name: newMember.last_name,
-          role: 'member'
+          member_id: profileData.id
         });
 
-      if (error) throw error;
+      if (memberError) throw memberError;
 
       await loadMembers();
-      setNewMember({ email: '', first_name: '', last_name: '' });
+      setNewMemberEmail('');
     } catch (err) {
       console.error('Error adding member:', err);
-      setError(err instanceof Error ? err.message : 'Failed to add member');
+      setError(
+        err instanceof Error 
+          ? err.message 
+          : 'Failed to add member. Make sure the email is registered.'
+      );
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleRemoveMember = async (email: string) => {
+  const handleRemoveMember = async (memberId: string) => {
     if (!groupId) return;
 
     try {
@@ -81,7 +107,7 @@ export default function GroupMembers() {
         .from('group_members')
         .delete()
         .eq('group_id', groupId)
-        .eq('email', email);
+        .eq('member_id', memberId);
 
       if (error) throw error;
       await loadMembers();
@@ -180,32 +206,16 @@ export default function GroupMembers() {
           <div>
             <input
               type="email"
-              value={newMember.email}
-              onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+              value={newMemberEmail}
+              onChange={(e) => setNewMemberEmail(e.target.value)}
               placeholder="Email"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ff4d00] focus:border-transparent"
             />
           </div>
-          <div>
-            <input
-              type="text"
-              value={newMember.first_name}
-              onChange={(e) => setNewMember({ ...newMember, first_name: e.target.value })}
-              placeholder="First Name"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ff4d00] focus:border-transparent"
-            />
-          </div>
-          <div className="flex gap-4">
-            <input
-              type="text"
-              value={newMember.last_name}
-              onChange={(e) => setNewMember({ ...newMember, last_name: e.target.value })}
-              placeholder="Last Name"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ff4d00] focus:border-transparent"
-            />
+          <div className="col-span-2 flex gap-4">
             <button
               onClick={handleAddMember}
-              disabled={!newMember.email || isSaving}
+              disabled={!newMemberEmail || isSaving}
               className="px-4 py-2 bg-[#ff4d00] text-white rounded-lg hover:bg-[#e64600] transition-colors disabled:opacity-50"
             >
               {isSaving ? (
@@ -222,13 +232,11 @@ export default function GroupMembers() {
           {members.map((member, index) => (
             <div key={index} className="flex items-center justify-between p-4">
               <div>
-                <div className="font-medium text-gray-900">
-                  {member.first_name} {member.last_name}
-                </div>
-                <div className="text-sm text-gray-600">{member.email}</div>
+                <div className="font-medium text-gray-900">{member.full_name || 'Unnamed User'}</div>
+                <div className="text-sm text-gray-600">{member.username}</div>
               </div>
               <button
-                onClick={() => handleRemoveMember(member.email)}
+                onClick={() => handleRemoveMember(member.id)}
                 className="text-red-600 hover:text-red-700"
               >
                 Remove
